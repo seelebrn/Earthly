@@ -132,11 +132,11 @@ namespace 天地归虚ENMod
                 TextWriter tw = new StreamWriter(Path.Combine(BepInEx.Paths.PluginPath, "results.txt"));
 
                 foreach (string s in unique)
-                { 
-                    if(Helpers.IsChinese(s))
-                    { 
-                    tw.WriteLine(s);
-                }
+                {
+                    if (Helpers.IsChinese(s))
+                    {
+                        tw.WriteLine(s);
+                    }
                 }
                 tw.Close();
             }
@@ -154,6 +154,11 @@ namespace 天地归虚ENMod
                         Debug.Log("f.Name = " + f.Name);
                         var value = f.GetValue(mb);
                         Debug.Log("Value Type = " + value.GetType());
+                        if(value.GetType() == typeof(string))
+                        {
+                            results.Add(value.ToString());
+                        }
+                        else { 
                         foreach (var x in value as IEnumerable<object>)
                         {
                             Debug.Log("x.Name = " + x.ToString());
@@ -183,7 +188,7 @@ namespace 天地归虚ENMod
                                 else
                                 {
                                     Debug.Log("Missing Type = " + suf.GetUnderlyingType());
-                                    if (suf.GetUnderlyingType() == typeof(Dialog[]) 
+                                    if (suf.GetUnderlyingType() == typeof(Dialog[])
                                         || suf.GetUnderlyingType() == typeof(Pellet[])
                                         || suf.GetUnderlyingType() == typeof(AShuFa[])
                                         || suf.GetUnderlyingType() == typeof(ItemStored[])
@@ -202,7 +207,7 @@ namespace 天地归虚ENMod
                                         || suf.GetUnderlyingType() == typeof(List<Influence>)
                                         || suf.GetUnderlyingType() == typeof(List<DropItem>)
                                         || suf.GetUnderlyingType() == typeof(List<DropGroupInfo>)
-                                        || suf.GetUnderlyingType() == typeof(List<ExtraStuck>)                                        
+                                        || suf.GetUnderlyingType() == typeof(List<ExtraStuck>)
                                         )
                                     {
                                         Debug.Log("Here are the dialogs !");
@@ -231,9 +236,10 @@ namespace 天地归虚ENMod
 
                         }
                     }
+                    }
                 }
-              
-                    context.Asset = mb; // only need to update the reference if you created a new texture
+
+                context.Asset = mb; // only need to update the reference if you created a new texture
                 context.Complete(
                     skipRemainingPostfixes: true);
 
