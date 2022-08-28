@@ -143,109 +143,161 @@ namespace 天地归虚ENMod
         }
         public void AssetLoaded(AssetLoadedContext context)
         {
-            if (context.Asset is ScriptableObject mb) // also acts as a null check
+            if (context.Asset is GameObject go) // also acts as a null check
             {
-                Debug.Log("mb.name = " + mb.name);
-                if (mb.name != "forbidden")
+                
+
+                Component[] mb = go.GetComponentsInChildren(typeof(MonoBehaviour));
+                foreach (Component c in mb)
                 {
-                    FieldInfo[] fi = mb.GetType().GetFields();
-                    foreach (FieldInfo f in fi)
+
+                    if (typeof(MonoBehaviour).IsAssignableFrom(c.GetType()))
                     {
-                        Debug.Log("f.Name = " + f.Name);
-                        var value = f.GetValue(mb);
-                        Debug.Log("Value Type = " + value.GetType());
-                        if(value.GetType() == typeof(string))
+                        PropertyInfo[] pi = c.GetType().GetProperties();
+                        foreach (PropertyInfo p in pi)
                         {
-                            results.Add(value.ToString());
-                        }
-                        else { 
-                        foreach (var x in value as IEnumerable<object>)
-                        {
-                            Debug.Log("x.Name = " + x.ToString());
-                            FieldInfo[] sufi = x.GetType().GetFields();
-                            foreach (FieldInfo suf in sufi)
-                            {
-                                if (suf.GetUnderlyingType() == typeof(string))
+                            if (p.PropertyType == typeof(string))
+                            { 
+                            Debug.Log("Value Property = " + p.GetValue(c));
+                                if (!results.Contains(p.GetValue(c)))
                                 {
-                                    results.Add(suf.GetValue(x).ToString());
-                                }
-                                else if (suf.GetUnderlyingType() == typeof(string[]))
-                                {
-                                    foreach (string s in suf.GetValue(x) as string[])
-                                    {
-                                        results.Add(s);
-                                    }
-                                }
-                                else if (suf.GetUnderlyingType() == typeof(List<string>))
-                                {
-                                    foreach (string s in suf.GetValue(x) as List<string>)
-                                    {
-                                        results.Add(s);
-                                    }
-                                }
-
-
-                                else
-                                {
-                                    Debug.Log("Missing Type = " + suf.GetUnderlyingType());
-                                    if (suf.GetUnderlyingType() == typeof(Dialog[])
-                                        || suf.GetUnderlyingType() == typeof(Pellet[])
-                                        || suf.GetUnderlyingType() == typeof(AShuFa[])
-                                        || suf.GetUnderlyingType() == typeof(ItemStored[])
-                                        || suf.GetUnderlyingType() == typeof(GodNodeLinkClassList[])
-                                        || suf.GetUnderlyingType() == typeof(Option[])
-                                        || suf.GetUnderlyingType() == typeof(WeaponTreeNode[])
-                                        || suf.GetUnderlyingType() == typeof(ExploreFloor[])
-                                        || suf.GetUnderlyingType() == typeof(ExploreFloor[])
-                                        || suf.GetUnderlyingType() == typeof(List<TalkInfo>)
-                                        || suf.GetUnderlyingType() == typeof(List<ItemRequire>)
-                                        || suf.GetUnderlyingType() == typeof(List<Require>)
-                                        || suf.GetUnderlyingType() == typeof(List<TradeRequire>)
-                                        || suf.GetUnderlyingType() == typeof(List<AXinFa>)
-                                        || suf.GetUnderlyingType() == typeof(List<ConsumableEffect>)
-                                        || suf.GetUnderlyingType() == typeof(List<Replys>)
-                                        || suf.GetUnderlyingType() == typeof(List<Influence>)
-                                        || suf.GetUnderlyingType() == typeof(List<DropItem>)
-                                        || suf.GetUnderlyingType() == typeof(List<DropGroupInfo>)
-                                        || suf.GetUnderlyingType() == typeof(List<ExtraStuck>)
-                                        )
-                                    {
-                                        Debug.Log("Here are the dialogs !");
-                                        foreach (var y in suf.GetValue(x) as IEnumerable<object>)
-                                        {
-                                            Debug.Log("y.Name = " + y.ToString());
-                                            FieldInfo[] susufi = y.GetType().GetFields();
-                                            foreach (FieldInfo susuf in susufi)
-                                            {
-                                                Debug.Log("SusufName = " + susuf.Name + " + SususfType = " + susuf.GetUnderlyingType());
-                                                if (susuf.GetUnderlyingType() == typeof(string))
-                                                {
-                                                    results.Add(susuf.GetValue(y).ToString());
-                                                }
-
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Debug.Log("Missing Type sublevel = " + suf.GetUnderlyingType());
-                                    }
+                                    results.Add(p.GetValue(c).ToString());
                                 }
                             }
-
-
+                            if(p.PropertyType == typeof(UnityEngine.UI.Text))
+                            {
+                                UnityEngine.UI.Text x = p.GetValue(c) as UnityEngine.UI.Text;
+                                results.Add(x.text);
+                            }
+                            if (p.PropertyType == typeof(TextMeshProUGUI))
+                            {
+                                TextMeshProUGUI x = p.GetValue(c) as TextMeshProUGUI;
+                                results.Add(x.text);
+                            }
                         }
-                    }
+
                     }
                 }
 
-                context.Asset = mb; // only need to update the reference if you created a new texture
+                
+
+                context.Asset = go; // only need to update the reference if you created a new texture
                 context.Complete(
                     skipRemainingPostfixes: true);
 
             }
-        }
+            /*
+            if (context.Asset is ScriptableObject so) // also acts as a null check
+            {
 
+                MemberInfo[] mi = so.GetType().GetMembers();
+                {
+                    foreach(MemberInfo m in mi)
+                    {
+                        if(m.MemberType.ToString() == "Field")
+                        {
+                            FieldInfo f = (FieldInfo)m;
+                            Debug.Log("Field name = " + f.Name);
+                            Debug.Log("Field type = " + f.GetUnderlyingType());
+                            if(f.GetUnderlyingType() == typeof(string))
+                            {
+                                Debug.Log("Value = " + f.GetValue(so));
+                                if (!results.Contains(f.GetValue(so).ToString()))
+                                {
+                                    results.Add(f.GetValue(so).ToString());
+                                }
+                            }
+                            else
+                            {
+                                if (typeof(System.Collections.IEnumerable).IsAssignableFrom(f.GetUnderlyingType()))
+                                {
+                                    foreach (var x in f.GetValue(so) as IEnumerable<object>)
+                                    {
+                                        Debug.Log(x.GetType());
+                                        FieldInfo[] sufi = x.GetType().GetFields();
+                                        foreach (FieldInfo suf in sufi)
+                                        {
+                                            if (suf.GetUnderlyingType() == typeof(string))
+                                            { Debug.Log("Value 2 = " + suf.GetValue(x));
+                                                if(!results.Contains(suf.GetValue(x).ToString()))
+                                                {
+                                                    results.Add(suf.GetValue(x).ToString());
+                                                }
+
+                                            }
+                                            if (suf.GetUnderlyingType() != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(suf.GetUnderlyingType()))
+                                            {
+                                                foreach(var y in suf.GetValue(x) as IEnumerable<object>)
+                                                {
+                                                    FieldInfo[] susufi = y.GetType().GetFields();
+                                                    foreach(FieldInfo susuf in susufi)
+                                                    {
+                                                        if (susuf.GetUnderlyingType() == typeof(string))
+                                                        {
+                                                            Debug.Log("Value 3 = " + susuf.GetValue(y));
+                                                            if (!results.Contains(susuf.GetValue(y).ToString()))
+                                                            {
+                                                                results.Add(susuf.GetValue(y).ToString());
+                                                            }
+                                                        }
+                                                        if (susuf.GetUnderlyingType() != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(susuf.GetUnderlyingType()))
+                                                        {
+                                                            Debug.Log("Nested Susuf = " + susuf.GetUnderlyingType());
+                                                            foreach (var z in susuf.GetValue(y) as IEnumerable<object>)
+                                                            {
+                                                                FieldInfo[] sususufi = z.GetType().GetFields();
+                                                                foreach (FieldInfo sususuf in sususufi)
+                                                                {
+                                                                    if (sususuf.GetUnderlyingType() == typeof(string))
+                                                                    {
+                                                                        Debug.Log("Value 4 = " + sususuf.GetValue(z));
+                                                                        if (!results.Contains(sususuf.GetValue(z).ToString()))
+                                                                        {
+                                                                            results.Add(sususuf.GetValue(z).ToString());
+                                                                        }
+                                                                    }
+                                                                    if (sususuf.GetUnderlyingType() != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(sususuf.GetUnderlyingType()))
+                                                                    {
+                                                                        Debug.Log("Nested sususuf = " + sususuf.GetUnderlyingType());
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                            }
+                        }
+                        if(m.MemberType.ToString() == "Property")
+                        {
+                            PropertyInfo f = (PropertyInfo)m;
+                            Debug.Log("Property name = " + f.Name);
+
+                            if (f.GetUnderlyingType() == typeof(string))
+                            { 
+                                Debug.Log("Value = " + f.GetValue(so)); 
+                            }
+                         
+                        }
+
+
+                    }
+                }
+
+
+
+                context.Asset = so; // only need to update the reference if you created a new texture
+                context.Complete(
+                    skipRemainingPostfixes: true);
+
+            }*/
+        }
+            
 
     }
 
