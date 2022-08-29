@@ -13,6 +13,7 @@ using System.Reflection.Emit;
 using Newtonsoft.Json;
 using TMPro;
 using XUnity.ResourceRedirector;
+using UnityEditor;
 
 
 
@@ -25,67 +26,11 @@ namespace 天地归虚ENMod
     {
         public static BepInEx.Logging.ManualLogSource log;
         public static List<string> results = new List<String>();
-        public static List<string> masterlist = new List<string>()
-            {
-"ANPCCharaTemplate",
-"Weapon",
-"PelletGroup",
-"Pellet",
-"PelletFormulaBook",
-"PelletFormula",
-"Materials",
-"Item",
-"Stove",
-"Fire",
-"MagicPaper",
-"WeaponFormula",
-"ZhuangShiPin",
-"StovePos",
-"StovePosBook",
-"TbsFramework.Skill.SkillInfo",
-"EffectInfo",
-"LifeSkill",
-"TbsFramework.Skill.ParticleInfo",
-"TbsFramework.Skill.WallInfo",
-"BattleSceneInfo",
-"BossInfo",
-"WeatherInfo",
-"ArmatureMod",
-"EntryInfo",
-"BuffInfo",
-"TradeEntryInfo",
-"FbEntryInfo",
-"ZhenFa",
-"XinFa",
-"ShuFa",
-"AbstractXinFaBook",
-"AbstractShuFaBook",
-"ExploreItem",
-"WeaponBattleInfo",
-"MonsterGroupInfo",
-"MonsterTermInfo",
-"DropItemGroup",
-"DropTerm",
-"DropTermManager",
-"ResistInfo",
-"AreaLeveInfo",
-"GodClass",
-"GodNode",
-"PlantClass",
-"WeaponTreeNode",
-"TechTreeNode",
-"ATechTree",
-"Consumable",
-"PaiXiTemple",
-"DicSenseInfo",
-"UnityEngine.UI.Text",
-"TMPro.TextMeshProUGUI",
-"Flowchart"
-            };
         public const string pluginGuid = "Cadenza.ENMOD.0.5";
         public const string pluginName = "ENMod";
         public const string pluginVersion = "0.5";
         public static Dictionary<string, string> translationDict;
+        public static List<string> MissingLines = new List<string>();
         public static Dictionary<string, string> FileToDictionary(string dir)
         {
             Debug.Log(BepInEx.Paths.PluginPath);
@@ -114,18 +59,150 @@ namespace 天地归虚ENMod
         }
 
 
-        public static System.Collections.IDictionary d;
-
-        void Awake()
+        private void Awake()
         {
-            ResourceRedirection.RegisterAssetLoadedHook(
-                behaviour: HookBehaviour.OneCallbackPerResourceLoaded,
-                priority: 0,
-                action: AssetLoaded);
+            translationDict = FileToDictionary("KV.txt");
+            var harmony = new Harmony("Cadenza.ENMOD.0.5");
+            harmony.PatchAll();
         }
 
-        private void Update()
+
+        
+
+                private void Update()
         {
+            Type[] ts = Assembly.GetAssembly(typeof(WholeObjects)).GetTypes();
+            Type[] ts2 = Assembly.GetAssembly(typeof(TextMeshProUGUI)).GetTypes();
+
+
+
+            if (Input.GetKeyUp(KeyCode.F9) == true)
+            {
+                List<GameObject> gameObjects = Resources.FindObjectsOfTypeAll<GameObject>().ToList();
+                foreach (GameObject go in gameObjects)
+                {
+                    TextMeshProUGUI[] tmp = go.GetComponentsInChildren<TextMeshProUGUI>();
+                    UnityEngine.UI.Text[] tmp2 = go.GetComponentsInChildren<UnityEngine.UI.Text>();
+                    tmp.AddRangeToArray<TextMeshProUGUI>(go.GetComponents<TextMeshProUGUI>());
+                    tmp.AddRangeToArray<TextMeshProUGUI>(go.GetComponentsInParent<TextMeshProUGUI>());
+                    tmp2.AddRangeToArray<UnityEngine.UI.Text>(go.GetComponents<UnityEngine.UI.Text>());
+                    tmp2.AddRangeToArray<UnityEngine.UI.Text>(go.GetComponentsInParent<UnityEngine.UI.Text>());
+
+                    foreach (TextMeshProUGUI t in tmp)
+                    {
+                        if (!results.Contains(t.text.Replace("\n", "")))
+                        {
+                            results.Add(t.text.Replace("\n", ""));
+                        }
+                    }
+                    foreach (UnityEngine.UI.Text t2 in tmp2)
+                    {
+                        {
+                            if (!results.Contains(t2.text.Replace("\n", "")))
+                            {
+                                results.Add(t2.text.Replace("\n", ""));
+                            }
+                        }
+
+                    }
+                    UnityEngine.Object[] tmp3 = go.GetComponentsInChildren<UnityEngine.Object>();
+
+                }
+                foreach (Type t in ts)
+                {
+                    if (typeof(UnityEngine.Object).IsAssignableFrom(t))
+                    {
+                        var x0 = Resources.FindObjectsOfTypeAll(t).ToList();
+
+                        foreach (var obj in x0)
+                        {
+                            try
+                            {
+                                FieldInfo[] fi = obj.GetType().GetFields();
+                                foreach (FieldInfo f in fi)
+                                {
+                                    if (f.GetUnderlyingType() == typeof(string))
+                                    {
+                                        Debug.Log("Value = " + f.GetValue(obj).ToString().Replace("\n", ""));
+                                        if (!results.Contains(f.GetValue(obj).ToString().Replace("\n", "")))
+                                        {
+                                            results.Add(f.GetValue(obj).ToString().Replace("\n", ""));
+
+                                        }
+                                    }
+                                    else
+
+                                    {
+                                        if (typeof(System.Collections.IEnumerable).IsAssignableFrom(f.GetUnderlyingType()))
+                                        {
+                                            foreach (var x in f.GetValue(obj) as IEnumerable<object>)
+                                            {
+                                                Debug.Log(x.GetType());
+                                                FieldInfo[] sufi = x.GetType().GetFields();
+                                                foreach (FieldInfo suf in sufi)
+                                                {
+                                                    if (suf.GetUnderlyingType() == typeof(string))
+                                                    {
+                                                        Debug.Log("Value 2 = " + suf.GetValue(x).ToString().Replace("\n", ""));
+                                                        if (!results.Contains(suf.GetValue(x).ToString().Replace("\n", "")))
+                                                        {
+                                                            results.Add(suf.GetValue(x).ToString().Replace("\n", ""));
+                                                        }
+                                                    }
+                                                    if (suf.GetUnderlyingType() != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(suf.GetUnderlyingType()))
+                                                    {
+                                                        foreach (var y in suf.GetValue(x) as IEnumerable<object>)
+                                                        {
+                                                            FieldInfo[] susufi = y.GetType().GetFields();
+                                                            foreach (FieldInfo susuf in susufi)
+                                                            {
+                                                                if (susuf.GetUnderlyingType() == typeof(string))
+                                                                {
+                                                                    Debug.Log("Value 3 = " + susuf.GetValue(y));
+                                                                    if (!results.Contains(susuf.GetValue(y).ToString()))
+                                                                    {
+                                                                        results.Add(susuf.GetValue(y).ToString());
+                                                                    }
+                                                                }
+                                                                if (susuf.GetUnderlyingType() != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(susuf.GetUnderlyingType()))
+                                                                {
+                                                                    Debug.Log("Nested Susuf = " + susuf.GetUnderlyingType());
+                                                                    foreach (var z in susuf.GetValue(y) as IEnumerable<object>)
+                                                                    {
+                                                                        FieldInfo[] sususufi = z.GetType().GetFields();
+                                                                        foreach (FieldInfo sususuf in sususufi)
+                                                                        {
+                                                                            if (sususuf.GetUnderlyingType() == typeof(string))
+                                                                            {
+                                                                                Debug.Log("Value 4 = " + sususuf.GetValue(z));
+                                                                                if (!results.Contains(sususuf.GetValue(z).ToString()))
+                                                                                {
+                                                                                    results.Add(sususuf.GetValue(z).ToString());
+                                                                                }
+                                                                            }
+                                                                            if (sususuf.GetUnderlyingType() != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(sususuf.GetUnderlyingType()))
+                                                                            {
+                                                                                Debug.Log("Nested sususuf = " + sususuf.GetUnderlyingType());
+
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            catch
+                            { }
+                        }
+                    }
+                }
+            }
             if (Input.GetKeyUp(KeyCode.F10) == true)
             {
                 var unique = results.Distinct();
@@ -139,169 +216,132 @@ namespace 天地归虚ENMod
                     }
                 }
                 tw.Close();
-            }
-        }
-        public void AssetLoaded(AssetLoadedContext context)
-        {
-            if (context.Asset is GameObject go) // also acts as a null check
-            {
-                
+                var unique2 = MissingLines.Distinct();
+                TextWriter tw2 = new StreamWriter(Path.Combine(BepInEx.Paths.PluginPath, "missing.txt"));
 
-                Component[] mb = go.GetComponentsInChildren(typeof(MonoBehaviour));
-                foreach (Component c in mb)
+                foreach (string s2 in unique2)
                 {
-
-                    if (typeof(MonoBehaviour).IsAssignableFrom(c.GetType()))
+                    if (Helpers.IsChinese(s2))
                     {
-                        PropertyInfo[] pi = c.GetType().GetProperties();
-                        foreach (PropertyInfo p in pi)
-                        {
-                            if (p.PropertyType == typeof(string))
-                            { 
-                            Debug.Log("Value Property = " + p.GetValue(c));
-                                if (!results.Contains(p.GetValue(c)))
-                                {
-                                    results.Add(p.GetValue(c).ToString());
-                                }
-                            }
-                            if(p.PropertyType == typeof(UnityEngine.UI.Text))
-                            {
-                                UnityEngine.UI.Text x = p.GetValue(c) as UnityEngine.UI.Text;
-                                results.Add(x.text);
-                            }
-                            if (p.PropertyType == typeof(TextMeshProUGUI))
-                            {
-                                TextMeshProUGUI x = p.GetValue(c) as TextMeshProUGUI;
-                                results.Add(x.text);
-                            }
-                        }
-
+                        tw2.WriteLine(s2);
                     }
                 }
-
-                
-
-                context.Asset = go; // only need to update the reference if you created a new texture
-                context.Complete(
-                    skipRemainingPostfixes: true);
-
+                tw2.Close();
             }
-            /*
-            if (context.Asset is ScriptableObject so) // also acts as a null check
-            {
-
-                MemberInfo[] mi = so.GetType().GetMembers();
-                {
-                    foreach(MemberInfo m in mi)
-                    {
-                        if(m.MemberType.ToString() == "Field")
-                        {
-                            FieldInfo f = (FieldInfo)m;
-                            Debug.Log("Field name = " + f.Name);
-                            Debug.Log("Field type = " + f.GetUnderlyingType());
-                            if(f.GetUnderlyingType() == typeof(string))
-                            {
-                                Debug.Log("Value = " + f.GetValue(so));
-                                if (!results.Contains(f.GetValue(so).ToString()))
-                                {
-                                    results.Add(f.GetValue(so).ToString());
-                                }
-                            }
-                            else
-                            {
-                                if (typeof(System.Collections.IEnumerable).IsAssignableFrom(f.GetUnderlyingType()))
-                                {
-                                    foreach (var x in f.GetValue(so) as IEnumerable<object>)
-                                    {
-                                        Debug.Log(x.GetType());
-                                        FieldInfo[] sufi = x.GetType().GetFields();
-                                        foreach (FieldInfo suf in sufi)
-                                        {
-                                            if (suf.GetUnderlyingType() == typeof(string))
-                                            { Debug.Log("Value 2 = " + suf.GetValue(x));
-                                                if(!results.Contains(suf.GetValue(x).ToString()))
-                                                {
-                                                    results.Add(suf.GetValue(x).ToString());
-                                                }
-
-                                            }
-                                            if (suf.GetUnderlyingType() != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(suf.GetUnderlyingType()))
-                                            {
-                                                foreach(var y in suf.GetValue(x) as IEnumerable<object>)
-                                                {
-                                                    FieldInfo[] susufi = y.GetType().GetFields();
-                                                    foreach(FieldInfo susuf in susufi)
-                                                    {
-                                                        if (susuf.GetUnderlyingType() == typeof(string))
-                                                        {
-                                                            Debug.Log("Value 3 = " + susuf.GetValue(y));
-                                                            if (!results.Contains(susuf.GetValue(y).ToString()))
-                                                            {
-                                                                results.Add(susuf.GetValue(y).ToString());
-                                                            }
-                                                        }
-                                                        if (susuf.GetUnderlyingType() != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(susuf.GetUnderlyingType()))
-                                                        {
-                                                            Debug.Log("Nested Susuf = " + susuf.GetUnderlyingType());
-                                                            foreach (var z in susuf.GetValue(y) as IEnumerable<object>)
-                                                            {
-                                                                FieldInfo[] sususufi = z.GetType().GetFields();
-                                                                foreach (FieldInfo sususuf in sususufi)
-                                                                {
-                                                                    if (sususuf.GetUnderlyingType() == typeof(string))
-                                                                    {
-                                                                        Debug.Log("Value 4 = " + sususuf.GetValue(z));
-                                                                        if (!results.Contains(sususuf.GetValue(z).ToString()))
-                                                                        {
-                                                                            results.Add(sususuf.GetValue(z).ToString());
-                                                                        }
-                                                                    }
-                                                                    if (sususuf.GetUnderlyingType() != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(sususuf.GetUnderlyingType()))
-                                                                    {
-                                                                        Debug.Log("Nested sususuf = " + sususuf.GetUnderlyingType());
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                            }
-                        }
-                        if(m.MemberType.ToString() == "Property")
-                        {
-                            PropertyInfo f = (PropertyInfo)m;
-                            Debug.Log("Property name = " + f.Name);
-
-                            if (f.GetUnderlyingType() == typeof(string))
-                            { 
-                                Debug.Log("Value = " + f.GetValue(so)); 
-                            }
-                         
-                        }
-
-
-                    }
-                }
-
-
-
-                context.Asset = so; // only need to update the reference if you created a new texture
-                context.Complete(
-                    skipRemainingPostfixes: true);
-
-            }*/
         }
-            
-
     }
 
 
+    [HarmonyPatch(typeof(TextMeshProUGUI), "OnEnable")]
+    static class Patch00
+    {
+    /*    static AccessTools.FieldRef<TextMeshProUGUI, TMP_TextInfo> m_textInfoRef =
+       AccessTools.FieldRefAccess<TextMeshProUGUI, TMP_TextInfo>("m_textInfo");
+        static void Postfix(TextMeshProUGUI __instance)
+        {
+
+            var m_textInfo = m_textInfoRef(__instance);
+            if (Main.translationDict.ContainsKey(m_textInfo.textComponent.text))
+            {
+                Debug.Log("Prefix String Case TMP __instance.text = " + m_textInfo.textComponent.text);
+
+                m_textInfo.textComponent.text = Main.translationDict[m_textInfo.textComponent.text];
+
+                //Traverse.Create(__instance).Field("text").SetValue(Main.translationDict[__instance.text]);
+
+                Debug.Log("Prefix Replaced string = " + m_textInfo.textComponent.text);
+            }
+            else
+            {
+                Debug.Log("Prefix Missed line TMP = " + m_textInfo.textComponent.text);
+                Main.MissingLines.Add(m_textInfo.textComponent.text);
+                //Main.MissingLines.Add(__instance.textInfo.textComponent.text);
+            }
+        }*/
+        static void Postfix(TextMeshProUGUI __instance)
+        {
+
+            if(Main.translationDict.ContainsKey(__instance.text.ToString()))
+            {
+                Debug.Log("String Case TMP __instance.text = " + __instance.text);
+                Debug.Log("String Case TMP __instance.text2 = " + __instance.textInfo.textComponent.text);
+
+                __instance.SetText(Main.translationDict[__instance.text]);
+
+                //Traverse.Create(__instance).Field("text").SetValue(Main.translationDict[__instance.text]);
+
+                Debug.Log("Replaced string = " + __instance.text);
+            }
+            else
+            {
+                Debug.Log("Missed line TMP = " + __instance.text);
+                Main.MissingLines.Add(__instance.text);
+                //Main.MissingLines.Add(__instance.textInfo.textComponent.text);
+            }
+        }
+    }
+    [HarmonyPatch(typeof(UnityEngine.UI.Text), "OnEnable")]
+    static class Patch01
+    {
+        static void Postfix(UnityEngine.UI.Text __instance)
+        {
+
+            Debug.Log("String Case UI.Text = " + __instance.text);
+            if (Main.translationDict.ContainsKey(__instance.text))
+            {
+                //Debug.Log("Found string = " + __instance.textInfo.textComponent.text);
+                __instance.text = Main.translationDict[__instance.text];
+                //Debug.Log("Replaced string = " + __instance.textInfo.textComponent.text);
+            }
+
+            else
+            {
+                Debug.Log("Missed line UEUIT = " + __instance.text);
+                Main.MissingLines.Add(__instance.text);
+            }
+        }
+    }
+    [HarmonyPatch(typeof(TMP_TextInfo), "Clear")]
+    static class Patch02
+    {
+        static void Prefix(TMP_TextInfo __instance)
+        {
+
+            Debug.Log("String Case TMP_TextInfo = " + __instance.textComponent.text);
+            if (Main.translationDict.ContainsKey(__instance.textComponent.text))
+            {
+                Debug.Log("TMP_TextInfo Found string = " + __instance.textComponent.text);
+                __instance.textComponent.text = Main.translationDict[__instance.textComponent.text];
+                Traverse.Create(__instance.textComponent.text).Property("text").SetValue(__instance.textComponent.text);
+                Debug.Log("TMP_TextInfo Replaced string = " + __instance.textComponent.text);
+            }
+
+            else
+            {
+                Debug.Log("Missing String Case TMP_TextInfo = " + __instance.textComponent.text);
+                Main.MissingLines.Add(__instance.textComponent.text);
+            }
+        }
+        static void Postfix(TMP_TextInfo __instance)
+        {
+               
+            Debug.Log("String Case TMP_TextInfo = " + __instance.textComponent.text);
+            if (Main.translationDict.ContainsKey(__instance.textComponent.text))
+            {
+                Debug.Log("TMP_TextInfo Found string = " + __instance.textComponent.text);
+                __instance.textComponent.text = Main.translationDict[__instance.textComponent.text];
+                Traverse.Create(__instance.textComponent.text).Property("text").SetValue(__instance.textComponent.text);
+                Debug.Log("TMP_TextInfo Replaced string = " + __instance.textComponent.text);
+            }
+
+            else
+            {
+                Debug.Log("Missing String Case TMP_TextInfo = " + __instance.textComponent.text);
+                Main.MissingLines.Add(__instance.textComponent.text);
+            }
+        }
+
+    }
     public static class Helpers
     {
         public static readonly Regex cjkCharRegex = new Regex(@"\p{IsCJKUnifiedIdeographs}");
